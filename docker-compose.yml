@@ -35,6 +35,7 @@ services:
             - files-in:/files/in
             - files-out:/files/out
             - files-q:/files/q
+            - te-reports:/reports
 
     ownc:
         image: owncloud/server
@@ -52,3 +53,4 @@ volumes:
     files-in:
     files-out:
     files-q:
+    te-reports:

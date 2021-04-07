@@ -3,8 +3,14 @@ const crypto = require('crypto');
 const path = require('path');
 const fetch = require("node-fetch");
 const FormData = require('form-data');
-const { createReadStream } = require('fs');
+const { createReadStream, mkdir } = require('fs');
 const sleep = require('sleep-promise');
+const {createWriteStream} = require('fs');
+const {pipeline} = require('stream');
+const {promisify} = require('util');
+
+const { v4: uuidv4 } = require('uuid');
+//uuidv4(); // ⇨ '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed'
 
 // bring your own API key
 const teApiKey = 'TE_API_KEY_O54cnvD0G7Va3Lb2ZqnLAvt6Y9so03ywmcO32p5o';
@@ -141,6 +147,55 @@ async function teUpload(filename) {
     }
 }
 
+async function teDownload(downloadId, reportPath) {
+    const url = `https://${config.teServer}/tecloud/api/v1/file/download?id=${downloadId}`;
+    try {
+        const res = await fetch(url, {
+            method: "get",
+            headers: { "Authorization": config.teApiKey }
+        })
+        const streamPipeline = promisify(pipeline);
+
+        if (!res.ok) return { error: `teDownload: unexpected response ${res.statusText}` };
+
+        //const filename = `./report-${downloadId}.bin`
+        const dirname = path.dirname(reportPath)
+        try {
+            await fs.mkdir(dirname, {recursive: true})
+            await streamPipeline(res.body, createWriteStream(reportPath));
+            return { filename: filename };
+        //const json = await res.json()
+        } catch (err) {
+            return { error: `${err}` };
+        }
+    } catch (err) {
+        throw new Error(`te: teDownload: ${JSON.stringify(err)}`);
+    }
+}
+
+function reportList(response) {
+    // console.log(`reportList`, response);
+    const reports = [];
+    if (response.te.status.code === 1001 && response.te.combined_verdict === 'malicious') {
+        for (const image of response.te.images) {
+            console.log(JSON.stringify(image))
+            const imageId = image.id;
+            for (const r of Object.keys(image.report)) {
+                if (r !== 'verdict') {
+                    // console.log(r, image.report[r], `${imageId}/${r}/${image.report[r]}`)
+                    reports.push(
+                        {
+                            reportId: image.report[r],
+                            reportPath: `${imageId}/${r}/${image.report[r]}`
+                        }
+                    )
+                }
+            }
+        }
+    }
+    return reports;
+}
+
 async function demo() {
     // const filename = 'neni.tu'
     const filename = './test-folder/zmocneni-k-vyzvednuti-ditete-z-mS-2014.pdf'
@@ -151,13 +206,21 @@ async function demo() {
     // console.log(await teQuota())
     // console.log(await isLicenseValid())
     // console.log(await teQuery(filename))
-    console.log(await teUpload(filename))
+    // console.log(await teUpload(filename))
+    const downloadId = "a1ccb7fb-71c0-4e2a-b134-2b51880c4b65"
+    console.log(await teDownload(downloadId))
 }
+
+// (async () => {
+//     await demo();
+// })() 
 
 const debugLog = console.log.bind(console);
 
 async function teInvestigate(filename) {
-    debugLog(`teInvestigate: handling new file ${filename}`)
+    const eventId = uuidv4();
+    debugLog(`teInvestigate [${eventId}]: handling new file ${filename}`)
+    const startTs = Date.now();
     try {
         if (! await isLicenseValid()) {
             debugLog(`teInvestigate: invalid license. returning`)
@@ -177,7 +240,8 @@ async function teInvestigate(filename) {
             
         while (true) {
             
-            debugLog(JSON.stringify(queryResult))
+            let delta = Date.now() - startTs
+            debugLog(`[+ ${delta} ms]`,JSON.stringify(queryResult))
             
             let response;
             if (typeof queryResult.response[0] === 'undefined') {
@@ -194,7 +258,12 @@ async function teInvestigate(filename) {
 
             switch (status) {
                 case 1001: // found
-                    debugLog(`file ${filename} combined verdict ${queryResult.response[0].te['combined_verdict']}`)
+                    for (const r of reportList(response)) {
+                        await teDownload(r.reportId, `/reports/${eventId}/${r.reportPath}`)
+                        debugLog(`REPORT downloaded as /reports/${eventId}/${r.reportPath}`, `for file ${filename}`)
+                    }
+                    debugLog(`FOUND file ${filename} combined verdict ${queryResult.response[0].te['combined_verdict']}`)
+                    debugLog(`[+ ${delta} ms] teInvestigate [${eventId}]: done with file ${filename}`)
                     return {
                         response: queryResult.response[0]
                     }
@@ -206,17 +275,17 @@ async function teInvestigate(filename) {
                     break;
 
                 case 1002: // upload success
-                    debugLog(`upload sucessful: ${filename}`);
+                    debugLog(`upload sucessful [+ ${delta} ms]: ${filename}`);
                     await sleep(config.queryInterval); // Wait
                     queryResult = await teQuery(filename)
                     break;
                 case 1003: // investigation pending
-                    debugLog(`investigation pending: ${filename}`);
+                    debugLog(`investigation pending [+ ${delta} ms]: ${filename}`);
                     await sleep(config.queryInterval); // Wait
                     queryResult = await teQuery(filename)
                     break;
                 default:
-                    return { error: `unexpected status code ${status}` }
+                    return { error: `[+ ${delta} ms] unexpected status code ${status}` }
             }
 
             
@@ -224,7 +293,7 @@ async function teInvestigate(filename) {
     } catch (err) {
         throw new Error(`te: teInvestigate: ${filename} ${JSON.stringify(err)}`);
     }
-    debugLog(`teInvestigate: done with file ${filename}`)
+    
 }
 
 /* (async () => {
@@ -233,4 +302,4 @@ async function teInvestigate(filename) {
     console.log(JSON.stringify(await teInvestigate(filename)))
 })() */
 
-module.exports = { isFile, fileSize, fileSha1, isLicenseValid, teQuota, teQuery, teUpload, teInvestigate }
+module.exports = { isFile, fileSize, fileSha1, isLicenseValid, teQuota, teQuery, teUpload, teInvestigate, teDownload }
