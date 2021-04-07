@@ -1,0 +1,54 @@
+version: '3.0'
+services:
+
+    sftp:
+        build: ./ftpserv
+        ports:
+        - "2222:22"
+        volumes:
+        - files-in:/root/files
+
+    sftpinside:
+        build: ./ftpserv
+        ports:
+        - "3333:22"
+        volumes:
+        - files-out:/root/files
+
+    web:
+        build: ./web
+        ports:
+        - "8888:80"
+        volumes:
+        - files-out:/usr/share/nginx/html
+
+    webq:
+        build: ./web
+        ports:
+        - "9999:80"
+        volumes:
+        - files-q:/usr/share/nginx/html
+
+    main:
+        build: .
+        volumes:
+            - files-in:/files/in
+            - files-out:/files/out
+            - files-q:/files/q
+
+    ownc:
+        image: owncloud/server
+        ports:
+            - "8080:8080"
+        volumes:
+            - files-in:/mnt/data/files/admin/files//in
+            - files-out:/mnt/data/files/admin/files/out
+            - files-q:/mnt/data/files/admin/files/q
+        environment:
+        - OWNCLOUD_DOMAIN=localhost:8080
+        # # /mnt/data/files/admin/files/ docker run -e OWNCLOUD_DOMAIN=localhost:8080 -p8080:8080 owncloud/server
+
+volumes:
+    files-in:
+    files-out:
+    files-q:
