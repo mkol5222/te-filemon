@@ -1,6 +1,12 @@
 version: '3.0'
 services:
 
+    file-upload:
+        build: ./file-upload
+        ports:
+        - "8223:1323"
+        volumes:
+        - files-in:/root/files
     sftp:
         build: ./ftpserv
         ports:
