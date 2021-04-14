@@ -35,6 +35,13 @@ services:
         volumes:
         - files-q:/usr/share/nginx/html
 
+    webr:
+        build: ./web
+        ports:
+        - "7777:80"
+        volumes:
+        - te-reports:/usr/share/nginx/html
+
     main:
         build: .
         volumes:
