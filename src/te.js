@@ -13,7 +13,7 @@ const { v4: uuidv4 } = require('uuid');
 //uuidv4(); // ⇨ '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed'
 
 // bring your own API key
-const teApiKey = 'TE_API_KEY_O54cnvD0G7Va3Lb2ZqnLAvt6Y9so03ywmcO32p5o';
+const teApiKey = 'TE_API_KEY_sZeJbRNlwaJZpoYoxqbjLkpnnu2jeBck2vG0rffE';
 
 const config = {
     teApiKey,
