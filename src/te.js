@@ -78,7 +78,7 @@ async function teQuota() {
     const url = `https://${config.teServer}/tecloud/api/v1/file/quota`;
     try {
         const res = await fetch(url, {
-            method: "get",
+            method: "post",
             headers: { "Content-Type": "application/json", "Authorization": config.teApiKey }
         })
 
