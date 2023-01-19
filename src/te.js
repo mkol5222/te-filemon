@@ -10,7 +10,10 @@ const {pipeline} = require('stream');
 const {promisify} = require('util');
 
 const { v4: uuidv4 } = require('uuid');
+const { stringify } = require('querystring');
 //uuidv4(); // ⇨ '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed'
+
+var contentDisposition = require('content-disposition');
 
 // bring your own API key
 const teApiKey = 'TE_API_KEY_sZeJbRNlwaJZpoYoxqbjLkpnnu2jeBck2vG0rffE';
@@ -159,10 +162,17 @@ async function teDownload(downloadId, reportPath) {
         if (!res.ok) return { error: `teDownload: unexpected response ${res.statusText}` };
 
         //const filename = `./report-${downloadId}.bin`
+        // console.log('teDownload res', res.headers, res.headers['content-disposition']);
+        // console.log(...res.headers);
+        // console.log(JSON.stringify(...res.headers, null, 2), res.headers.get('content-disposition'));
+        // console.log(contentDisposition.parse(res.headers.get('content-disposition')));
+        const cd = contentDisposition.parse(res.headers.get('content-disposition'));
+        const fn = cd.parameters.filename; // proposed file name
+        // console.log(reportPath, fn);
         const dirname = path.dirname(reportPath)
         try {
             await fs.mkdir(dirname, {recursive: true})
-            await streamPipeline(res.body, createWriteStream(reportPath));
+            await streamPipeline(res.body, createWriteStream(reportPath+'_'+fn));
             return { filename: filename };
         //const json = await res.json()
         } catch (err) {
