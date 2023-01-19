@@ -170,6 +170,7 @@ async function teDownload(downloadId, reportPath) {
         const fn = cd.parameters.filename; // proposed file name
         // console.log(reportPath, fn);
         const dirname = path.dirname(reportPath)
+        const filename = reportPath+'_'+fn;
         try {
             await fs.mkdir(dirname, {recursive: true})
             await streamPipeline(res.body, createWriteStream(reportPath+'_'+fn));
@@ -269,8 +270,8 @@ async function teInvestigate(filename) {
             switch (status) {
                 case 1001: // found
                     for (const r of reportList(response)) {
-                        await teDownload(r.reportId, `/reports/${eventId}/${r.reportPath}`)
-                        debugLog(`REPORT downloaded as /reports/${eventId}/${r.reportPath}`, `for file ${filename}`)
+                        const downloadRes = await teDownload(r.reportId, `/reports/${eventId}/${r.reportPath}`)
+                        debugLog(`REPORT downloaded as ${downloadRes.filename}`, `for file ${filename}`)
                     }
                     debugLog(`FOUND file ${filename} combined verdict ${queryResult.response[0].te['combined_verdict']}`)
                     debugLog(`[+ ${delta} ms] teInvestigate [${eventId}]: done with file ${filename}`)
