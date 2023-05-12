@@ -16,7 +16,7 @@ const { stringify } = require('querystring');
 var contentDisposition = require('content-disposition');
 
 // bring your own API key
-const teApiKey = 'TE_API_KEY_sZeJbRNlwaJZpoYoxqbjLkpnnu2jeBck2vG0rffE';
+const teApiKey = 'TE_API_KEY_lk5sUl5Klfkj4o0SloGFwKxaQXUfEWbyiIK5dBpk';
 
 const config = {
     teApiKey,
